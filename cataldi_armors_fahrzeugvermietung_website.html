@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cataldi Rentals – Fahrzeugvermietung</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; background:#f4f6f8; margin:0; color:#222; }
+    header { background:#111; color:#fff; padding:20px; display:flex; justify-content:space-between; align-items:center; }
+    header h1 { margin:0; font-family:'Inter', Arial, sans-serif; font-size:1.8em; font-weight:600; }
+    header p { margin:4px 0 0; color:#bbb; font-size:0.95em; }
+    .admin-login-btn { cursor:pointer; font-size:14px; opacity:0.8; }
+    .admin-login-btn:hover { opacity:1; }
+
+    nav { display:flex; justify-content:center; background:#222; gap:20px; padding:10px 0; }
+    nav button { padding:10px 22px; border:none; border-radius:999px; background:#fff; font-weight:600; cursor:pointer; }
+    nav button:hover { background:#e5e7eb; }
+
+    .home-section { text-align:center; padding:110px 20px; background:#111; color:#fff; }
+    .home-section h2 { font-size:3.5em; margin-bottom:20px; text-shadow:2px 2px 6px #000; }
+    .home-section p { max-width:820px; margin:0 auto; font-size:1.4em; text-shadow:1px 1px 4px #000; }
+
+    .container { max-width:1100px; margin:40px auto; padding:0 20px; }
+    .hidden { display:none; }
+
+    #categoryMenu { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:30px; }
+    #categoryMenu button { padding:10px 18px; border-radius:999px; border:none; font-weight:600; cursor:pointer; }
+
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:20px; }
+    .card { background:#fff; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.08); overflow:hidden; position:relative; cursor:pointer; }
+    .card img { width:100%; height:180px; object-fit:cover; background:#ddd; transition:filter 0.3s ease; }
+    .card-content { padding:16px; transition:filter 0.3s ease; }
+    .price { font-weight:bold; }
+    .status.available { color:#16a34a; }
+    .status.reserved { color:#dc2626; }
+
+    .admin, .contact { background:#fff; border-radius:12px; padding:20px; box-shadow:0 10px 25px rgba(0,0,0,0.08); margin-top:40px; }
+    .admin input, .admin select { width:100%; padding:10px; margin-bottom:10px; }
+    .admin button { padding:10px 16px; background:#111; color:#fff; border:none; border-radius:6px; cursor:pointer; }
+
+    footer { text-align:center; padding:20px; color:#777; font-size:14px; }
+
+    .card-overlay {
+      position:absolute;
+      inset:0;
+      background:rgba(17,17,17,0.75);
+      color:#fff;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      opacity:0;
+      transition:opacity 0.3s ease;
+      text-align:center;
+      padding:20px;
+    }
+
+    .card:hover .card-overlay { opacity:1; }
+    .card:hover img, .card:hover .card-content { filter:blur(3px); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Cataldi Rentals</h1>
+    <p>Premium Fahrzeugvermietung</p>
+  </div>
+  <div class="admin-login-btn" onclick="toggleLogin()">Admin Login</div>
+</header>
+
+<nav>
+  <button onclick="showSection('home')">Home</button>
+  <button onclick="showSection('vehicles')">Fahrzeuge</button>
+  <button onclick="showSection('contact')">Kontakt</button>
+</nav>
+
+<section id="home" class="home-section">
+  <h2>Premium Fahrzeuge. Klare Preise. Persönliche Vermietung.</h2>
+  <p>Bei Cataldi Rentals steht Qualität an erster Stelle. Jedes Fahrzeug wird sorgfältig ausgewählt, professionell verwaltet und transparent angeboten. Ob Kurzzeitmiete, Langzeitlösung oder ein möglicher Fahrzeugverkauf – hier erhalten Sie eine zuverlässige, strukturierte und persönliche Betreuung von der ersten Anfrage bis zur Übergabe.</p>
+</section>
+
+<section id="vehicles" class="container hidden">
+  <div id="categoryMenu"></div>
+  <div id="vehicleGrid"></div>
+</section>
+
+<section id="contact" class="container hidden contact">
+  <h2>Kontakt</h2>
+  <p><strong>Telefon:</strong> 6330</p>
+  <p><strong>G-Network:</strong> @nicoparker</p>
+  <p><strong>Name:</strong> Nico Cataldi</p>
+  <p><strong>Haus Nummer:</strong> 337</p>
+</section>
+
+<div class="admin" id="adminPanel" style="display:none;">
+  <h2>Adminbereich – Fahrzeug verwalten</h2>
+  <input id="vehName" placeholder="Fahrzeugname" />
+  <input id="vehPrice" placeholder="Preis (z. B. 2.500 $ / Std.)" />
+  <input id="vehUntil" placeholder="Reserviert bis (optional)" />
+  <input id="vehImage" placeholder="Bild-URL" />
+  <select id="vehCategory">
+    <option value="supersport">🏎️ Supersport</option>
+    <option value="mittelklasse">🚘 Mittelklasse</option>
+    <option value="nutzfahrzeuge">🚚 Nutzfahrzeuge</option>
+    <option value="helikopter">🚁 Helikopter</option>
+    <option value="boote">🚤 Boote</option>
+  </select>
+  <select id="vehStatus">
+    <option value="available">Verfügbar</option>
+    <option value="reserved">Reserviert</option>
+  </select>
+  <button onclick="addVehicle()">Fahrzeug speichern</button>
+</div>
+
+<div class="admin" id="loginPanel" style="display:none; position:fixed; top:80px; right:20px; max-width:300px; z-index:1000;">
+  <h2>Admin Login</h2>
+  <input id="adminPass" type="password" placeholder="Admin Passwort" />
+  <button onclick="login()">Einloggen</button>
+</div>
+
+<footer>© Nico Cataldi – GVMP</footer>
+
+<script>
+  const ADMIN_PASSWORD = "cataldi6330";
+  let vehicles = JSON.parse(localStorage.getItem('vehicles')) || [];
+
+  function showSection(section) {
+    ['home','vehicles','contact'].forEach(id => document.getElementById(id).classList.add('hidden'));
+    document.getElementById(section).classList.remove('hidden');
+    if(section==='vehicles') render();
+  }
+
+  function render(selectedCategory=null) {
+    const grid=document.getElementById('vehicleGrid');
+    const menu=document.getElementById('categoryMenu');
+    grid.innerHTML=''; menu.innerHTML='';
+
+    const categories={ supersport:'🏎️ Supersport Fahrzeuge', mittelklasse:'🚘 Mittelklasse', nutzfahrzeuge:'🚚 Nutzfahrzeuge', helikopter:'🚁 Helikopter', boote:'🚤 Boote' };
+
+    Object.keys(categories).forEach(cat=>{
+      const active=selectedCategory===cat;
+      menu.innerHTML+=`<button style="background:${active?'#111':'#e5e7eb'};color:${active?'#fff':'#111'}" onclick="render('${cat}')">${categories[cat]}</button>`;
+    });
+
+    if(!selectedCategory){ grid.innerHTML="<p style='opacity:0.6'>Bitte wählen Sie eine Kategorie aus.</p>"; return; }
+
+    grid.innerHTML=`<h2>${categories[selectedCategory]}</h2><div class='grid' id='activeGrid'></div>`;
+    const activeGrid=document.getElementById('activeGrid');
+    const filtered=vehicles.filter(v=>v.category===selectedCategory);
+
+    if(filtered.length===0){ activeGrid.innerHTML="<p style='opacity:0.6'>Derzeit keine Fahrzeuge verfügbar.</p>"; return; }
+
+    filtered.forEach(v=>{
+      activeGrid.innerHTML+=`
+      <div class='card'>
+        <img src='${v.image||''}'>
+        <div class='card-content'>
+          <h3>${v.name}</h3>
+          <p class='price'>${v.price}</p>
+          <p class='status ${v.status}'>${v.status==='available'?'Verfügbar':'Reserviert'}</p>
+          ${v.until?`<p>Bis: ${v.until}</p>`:''}
+        </div>
+        <div class='card-overlay'>
+          <h3>Kontakt</h3>
+          <p>📞 Telefon: <strong>6330</strong></p>
+          <p>🌐 G-Network: <strong>@nicoparker</strong></p>
+        </div>
+      </div>`;
+    });
+  }
+
+  function addVehicle(){
+    const nameEl=document.getElementById('vehName');
+    const priceEl=document.getElementById('vehPrice');
+    const untilEl=document.getElementById('vehUntil');
+    const imageEl=document.getElementById('vehImage');
+    const catEl=document.getElementById('vehCategory');
+    const statusEl=document.getElementById('vehStatus');
+
+    if(!nameEl.value.trim()){ alert('Bitte Fahrzeugnamen eingeben'); return; }
+
+    vehicles.push({ name:nameEl.value.trim(), price:priceEl.value||'Preis auf Anfrage', until:untilEl.value, image:imageEl.value, category:catEl.value, status:statusEl.value });
+    localStorage.setItem('vehicles',JSON.stringify(vehicles));
+
+    nameEl.value=priceEl.value=untilEl.value=imageEl.value='';
+    statusEl.value='available';
+    render(catEl.value);
+  }
+
+  function login(){ if(adminPass.value===ADMIN_PASSWORD){ adminPanel.style.display='block'; loginPanel.style.display='none'; } else alert('Falsches Passwort'); }
+  function toggleLogin(){ loginPanel.style.display=loginPanel.style.display==='none'?'block':'none'; }
+</script>
+
+</body>
+</html>
