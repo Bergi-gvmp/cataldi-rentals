@@ -90,7 +90,7 @@
     <h1>Cataldi Rentals</h1>
     <p>Premium Fahrzeugvermietung</p>
   </div>
-  <div class="admin-login-btn" onclick="toggleLogin()">Admin Login</div>
+  <!-- Admin Login bewusst unauffällig -->
 </header>
 
 <nav>
@@ -155,13 +155,35 @@
   const ADMIN_PASSWORD = "cataldi6330";
   let vehicles = JSON.parse(localStorage.getItem('vehicles')) || [];
 
+  let activeFilter = 'all';
+  let editIndex = null;
+  let editCategory = null;
+
   function showSection(section) {
     ['home','vehicles','contact'].forEach(id => document.getElementById(id).classList.add('hidden'));
     document.getElementById(section).classList.remove('hidden');
     if(section==='vehicles') render();
   }
 
-  let activeFilter='all';
+  // 🔐 Geheimer Admin-Zugriff: Shift + A
+  document.addEventListener('keydown', e => {
+    if (e.shiftKey && e.key.toLowerCase() === 'a') {
+      toggleLogin();
+    }
+  });
+
+  function toggleLogin() {
+    const panel = document.getElementById('loginPanel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function login() {
+    if (adminPass.value === ADMIN_PASSWORD) {
+      adminPanel.style.display = 'block';
+      loginPanel.style.display = 'none';
+      render();
+    } else alert('Falsches Passwort');
+  }
 
   function render(selectedCategory=null){
     const grid=document.getElementById('vehicleGrid');
@@ -186,22 +208,17 @@
 
     grid.innerHTML=`<h2>${categories[selectedCategory]}</h2><div class='grid' id='activeGrid'></div>`;
     const activeGrid=document.getElementById('activeGrid');
-    let filtered=vehicles.filter(v=>v.category===selectedCategory);
 
-    if(activeFilter!=='all'){
-      filtered=filtered.filter(v=>v.status===activeFilter);
-    }
+    let filtered=vehicles.filter(v=>v.category===selectedCategory);
+    if(activeFilter!=='all') filtered=filtered.filter(v=>v.status===activeFilter);
 
     if(filtered.length===0){ activeGrid.innerHTML="<p style='opacity:0.6'>Derzeit keine Fahrzeuge verfügbar.</p>"; return; }
 
     filtered.forEach((v,index)=>{
       activeGrid.innerHTML+=`
       <div class='card'>
-        ${adminPanel.style.display==='block'?`
-        <div style="position:absolute;top:10px;right:10px;display:flex;gap:6px;z-index:10;">
-          <button onclick="editVehicle(${index},'${selectedCategory}')" style="background:#2563eb;color:#fff;border:none;border-radius:50%;width:34px;height:34px;font-size:16px;cursor:pointer;">✏️</button>
-          <button onclick="removeVehicle(${index},'${selectedCategory}')" style="background:#dc2626;color:#fff;border:none;border-radius:50%;width:34px;height:34px;font-size:16px;cursor:pointer;">🗑️</button>
-        </div>`:''}
+        ${adminPanel.style.display==='block'?`<button onclick="startEdit(${index},'${selectedCategory}')" style="position:absolute;top:10px;right:50px;background:#2563eb;color:#fff;border:none;border-radius:50%;width:34px;height:34px;cursor:pointer;z-index:10;">✏️</button>
+        <button onclick="removeVehicle(${index},'${selectedCategory}')" style="position:absolute;top:10px;right:10px;background:#dc2626;color:#fff;border:none;border-radius:50%;width:34px;height:34px;cursor:pointer;z-index:10;">🗑️</button>`:''}
         <img src='${v.image||''}'>
         <div class='card-content'>
           <h3>${v.name}</h3>
@@ -218,76 +235,43 @@
     });
   }
 
+  function startEdit(index,category){
+    const filteredIndexes=vehicles.map((v,i)=>v.category===category?i:null).filter(i=>i!==null);
+    editIndex=filteredIndexes[index];
+    const v=vehicles[editIndex];
+    vehName.value=v.name;
+    vehPrice.value=v.price;
+    vehUntil.value=v.until||'';
+    vehImage.value=v.image||'';
+    vehStatus.value=v.status;
+    editCategory=v.category;
+    document.querySelector('.admin button').innerText='Änderungen speichern';
+  }
+
+  function addVehicle(){
+    const name=vehName.value.trim();
+    if(!name){ alert('Bitte Fahrzeugnamen eingeben'); return; }
+
+    if(editIndex!==null){
+      vehicles[editIndex]={ name, price:vehPrice.value, until:vehUntil.value, image:vehImage.value, category:editCategory, status:vehStatus.value };
+      editIndex=null; editCategory=null;
+      document.querySelector('.admin button').innerText='Fahrzeug speichern';
+    } else {
+      vehicles.push({ name, price:vehPrice.value||'Preis auf Anfrage', until:vehUntil.value, image:vehImage.value, category:vehCategory.value, status:vehStatus.value });
+    }
+
+    localStorage.setItem('vehicles',JSON.stringify(vehicles));
+    vehName.value=vehPrice.value=vehUntil.value=vehImage.value='';
+    vehStatus.value='available';
+    render();
+  }
+
   function removeVehicle(index,category){
     const filteredIndexes=vehicles.map((v,i)=>v.category===category?i:null).filter(i=>i!==null);
     vehicles.splice(filteredIndexes[index],1);
     localStorage.setItem('vehicles',JSON.stringify(vehicles));
     render(category);
   }
-
-  let editIndex=null;
-  let editCategory=null;
-
-  function addVehicle(){
-    const nameEl=document.getElementById('vehName');
-    const priceEl=document.getElementById('vehPrice');
-    const untilEl=document.getElementById('vehUntil');
-    const imageEl=document.getElementById('vehImage');
-    const catEl=document.getElementById('vehCategory');
-    const statusEl=document.getElementById('vehStatus');
-
-    if(!nameEl.value.trim()){ alert('Bitte Fahrzeugnamen eingeben'); return; }
-
-    if(editIndex!==null){
-      vehicles[editIndex]={
-        ...vehicles[editIndex],
-        name:nameEl.value.trim(),
-        price:priceEl.value||'Preis auf Anfrage',
-        until:untilEl.value,
-        image:imageEl.value,
-        status:statusEl.value
-      };
-      editIndex=null; editCategory=null;
-      document.querySelector('#adminPanel h2').innerText='Adminbereich – Fahrzeug verwalten';
-      document.querySelector('#adminPanel button').innerText='Fahrzeug speichern';
-    } else {
-      vehicles.push({
-        name:nameEl.value.trim(),
-        price:priceEl.value||'Preis auf Anfrage',
-        until:untilEl.value,
-        image:imageEl.value,
-        category:catEl.value,
-        status:statusEl.value
-      });
-    }
-
-    localStorage.setItem('vehicles',JSON.stringify(vehicles));
-    nameEl.value=priceEl.value=untilEl.value=imageEl.value='';
-    statusEl.value='available';
-    render(catEl.value);
-  }
-
-  function editVehicle(index,category){
-    const filteredIndexes=vehicles.map((v,i)=>v.category===category?i:null).filter(i=>i!==null);
-    const realIndex=filteredIndexes[index];
-    const v=vehicles[realIndex];
-
-    document.getElementById('vehName').value=v.name;
-    document.getElementById('vehPrice').value=v.price;
-    document.getElementById('vehUntil').value=v.until||'';
-    document.getElementById('vehImage').value=v.image||'';
-    document.getElementById('vehCategory').value=v.category;
-    document.getElementById('vehStatus').value=v.status;
-
-    editIndex=realIndex;
-    editCategory=category;
-    document.querySelector('#adminPanel h2').innerText='Fahrzeug bearbeiten';
-    document.querySelector('#adminPanel button').innerText='Änderungen speichern';
-    window.scrollTo({top:document.getElementById('adminPanel').offsetTop-40,behavior:'smooth'});
-  }
-
-  function login(){ if(adminPass.value===ADMIN_PASSWORD){ adminPanel.style.display='block'; loginPanel.style.display='none'; } else alert('Falsches Passwort'); }
-  function toggleLogin(){ loginPanel.style.display=loginPanel.style.display==='none'?'block':'none'; }
 </script>
 
 </body>
