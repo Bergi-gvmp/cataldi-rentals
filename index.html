@@ -24,7 +24,30 @@
     .hidden { display:none; }
 
     #categoryMenu { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:30px; }
-    #categoryMenu button { padding:10px 18px; border-radius:999px; border:none; font-weight:600; cursor:pointer; }
+    #categoryMenu button {
+      padding:10px 18px;
+      border-radius:999px;
+      border:none;
+      font-weight:600;
+      cursor:pointer;
+      background:#e5e7eb;
+      transition:all .2s ease;
+    }
+    #categoryMenu button:hover{background:#d1d5db;}
+
+    .filter-btn{
+      padding:10px 18px;
+      border-radius:999px;
+      border:none;
+      font-weight:600;
+      cursor:pointer;
+      background:#e5e7eb;
+      transition:all .2s ease;
+    }
+    .filter-btn.active{
+      background:#111;
+      color:#fff;
+    }
 
     .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:20px; }
     .card { background:#fff; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.08); overflow:hidden; position:relative; cursor:pointer; }
@@ -36,7 +59,8 @@
 
     .admin, .contact { background:#fff; border-radius:12px; padding:20px; box-shadow:0 10px 25px rgba(0,0,0,0.08); margin-top:40px; }
     .admin input, .admin select { width:100%; padding:10px; margin-bottom:10px; }
-    .admin button { padding:10px 16px; background:#111; color:#fff; border:none; border-radius:6px; cursor:pointer; }
+    .admin button { padding:10px 16px; background:#111; color:#fff; border:none; border-radius:6px; cursor:pointer; transition:all .2s ease; }
+    .admin button:hover{background:#000;transform:translateY(-1px);}
 
     footer { text-align:center; padding:20px; color:#777; font-size:14px; }
 
@@ -81,6 +105,7 @@
 </section>
 
 <section id="vehicles" class="container hidden">
+  <div id="filterBar" style="margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;"></div>
   <div id="categoryMenu"></div>
   <div id="vehicleGrid"></div>
 </section>
@@ -119,7 +144,12 @@
   <button onclick="login()">Einloggen</button>
 </div>
 
-<footer>© Nico Cataldi – GVMP</footer>
+<footer>
+  © Nico Cataldi – GVMP<br>
+</footer>
+<div style="background:#e5e7eb;color:#555;text-align:center;padding:14px;font-size:13px;">
+  Dieses Angebot ist Teil eines fiktiven Spiels (Roleplay). Alle dargestellten Fahrzeuge, Preise und Dienstleistungen sind vollständig erfunden und stehen in keinem Zusammenhang mit realen Angeboten oder Unternehmen.
+</div>
 
 <script>
   const ADMIN_PASSWORD = "cataldi6330";
@@ -131,29 +161,47 @@
     if(section==='vehicles') render();
   }
 
-  function render(selectedCategory=null) {
-    const grid=document.getElementById('vehicleGrid');
-    const menu=document.getElementById('categoryMenu');
-    grid.innerHTML=''; menu.innerHTML='';
+  let activeFilter='all';
 
-    const categories={ supersport:'🏎️ Supersport Fahrzeuge', mittelklasse:'🚘 Mittelklasse', nutzfahrzeuge:'🚚 Nutzfahrzeuge', helikopter:'🚁 Helikopter', boote:'🚤 Boote' };
+  function render(selectedCategory=null){
+    const grid=document.getElementById('vehicleGrid');
+    const filterBar=document.getElementById('filterBar');
+    const menu=document.getElementById('categoryMenu');
+    grid.innerHTML=''; menu.innerHTML=''; filterBar.innerHTML='';
+
+    const categories={ supersport:'🏎️ Supersportwagen', mittelklasse:'🚘 Mittelklasse & Limousinen', nutzfahrzeuge:'🚚 Nutz- & Arbeitsfahrzeuge', helikopter:'🚁 Luftfahrzeuge', boote:'🚤 Wasserfahrzeuge' };
+    const filters={ all:'🔵 Alle', available:'🟢 Verfügbar', reserved:'🔴 Reserviert' };
+
+    Object.keys(filters).forEach(f=>{
+      const activeF=activeFilter===f;
+      filterBar.innerHTML+=`<button class="filter-btn ${activeF?'active':''}" onclick="activeFilter='${f}';render('${selectedCategory}')">${filters[f]}</button>`;
+    });
 
     Object.keys(categories).forEach(cat=>{
       const active=selectedCategory===cat;
       menu.innerHTML+=`<button style="background:${active?'#111':'#e5e7eb'};color:${active?'#fff':'#111'}" onclick="render('${cat}')">${categories[cat]}</button>`;
     });
 
-    if(!selectedCategory){ grid.innerHTML="<p style='opacity:0.6'>Bitte wählen Sie eine Kategorie aus.</p>"; return; }
+    if(!selectedCategory){ grid.innerHTML="<p style='opacity:0.6'>Wählen Sie eine Fahrzeugkategorie aus und entdecken Sie passende Angebote für Ihren Bedarf.</p>"; return; }
 
     grid.innerHTML=`<h2>${categories[selectedCategory]}</h2><div class='grid' id='activeGrid'></div>`;
     const activeGrid=document.getElementById('activeGrid');
-    const filtered=vehicles.filter(v=>v.category===selectedCategory);
+    let filtered=vehicles.filter(v=>v.category===selectedCategory);
+
+    if(activeFilter!=='all'){
+      filtered=filtered.filter(v=>v.status===activeFilter);
+    }
 
     if(filtered.length===0){ activeGrid.innerHTML="<p style='opacity:0.6'>Derzeit keine Fahrzeuge verfügbar.</p>"; return; }
 
-    filtered.forEach(v=>{
+    filtered.forEach((v,index)=>{
       activeGrid.innerHTML+=`
       <div class='card'>
+        ${adminPanel.style.display==='block'?`
+        <div style="position:absolute;top:10px;right:10px;display:flex;gap:6px;z-index:10;">
+          <button onclick="editVehicle(${index},'${selectedCategory}')" style="background:#2563eb;color:#fff;border:none;border-radius:50%;width:34px;height:34px;font-size:16px;cursor:pointer;">✏️</button>
+          <button onclick="removeVehicle(${index},'${selectedCategory}')" style="background:#dc2626;color:#fff;border:none;border-radius:50%;width:34px;height:34px;font-size:16px;cursor:pointer;">🗑️</button>
+        </div>`:''}
         <img src='${v.image||''}'>
         <div class='card-content'>
           <h3>${v.name}</h3>
@@ -170,6 +218,16 @@
     });
   }
 
+  function removeVehicle(index,category){
+    const filteredIndexes=vehicles.map((v,i)=>v.category===category?i:null).filter(i=>i!==null);
+    vehicles.splice(filteredIndexes[index],1);
+    localStorage.setItem('vehicles',JSON.stringify(vehicles));
+    render(category);
+  }
+
+  let editIndex=null;
+  let editCategory=null;
+
   function addVehicle(){
     const nameEl=document.getElementById('vehName');
     const priceEl=document.getElementById('vehPrice');
@@ -180,12 +238,52 @@
 
     if(!nameEl.value.trim()){ alert('Bitte Fahrzeugnamen eingeben'); return; }
 
-    vehicles.push({ name:nameEl.value.trim(), price:priceEl.value||'Preis auf Anfrage', until:untilEl.value, image:imageEl.value, category:catEl.value, status:statusEl.value });
-    localStorage.setItem('vehicles',JSON.stringify(vehicles));
+    if(editIndex!==null){
+      vehicles[editIndex]={
+        ...vehicles[editIndex],
+        name:nameEl.value.trim(),
+        price:priceEl.value||'Preis auf Anfrage',
+        until:untilEl.value,
+        image:imageEl.value,
+        status:statusEl.value
+      };
+      editIndex=null; editCategory=null;
+      document.querySelector('#adminPanel h2').innerText='Adminbereich – Fahrzeug verwalten';
+      document.querySelector('#adminPanel button').innerText='Fahrzeug speichern';
+    } else {
+      vehicles.push({
+        name:nameEl.value.trim(),
+        price:priceEl.value||'Preis auf Anfrage',
+        until:untilEl.value,
+        image:imageEl.value,
+        category:catEl.value,
+        status:statusEl.value
+      });
+    }
 
+    localStorage.setItem('vehicles',JSON.stringify(vehicles));
     nameEl.value=priceEl.value=untilEl.value=imageEl.value='';
     statusEl.value='available';
     render(catEl.value);
+  }
+
+  function editVehicle(index,category){
+    const filteredIndexes=vehicles.map((v,i)=>v.category===category?i:null).filter(i=>i!==null);
+    const realIndex=filteredIndexes[index];
+    const v=vehicles[realIndex];
+
+    document.getElementById('vehName').value=v.name;
+    document.getElementById('vehPrice').value=v.price;
+    document.getElementById('vehUntil').value=v.until||'';
+    document.getElementById('vehImage').value=v.image||'';
+    document.getElementById('vehCategory').value=v.category;
+    document.getElementById('vehStatus').value=v.status;
+
+    editIndex=realIndex;
+    editCategory=category;
+    document.querySelector('#adminPanel h2').innerText='Fahrzeug bearbeiten';
+    document.querySelector('#adminPanel button').innerText='Änderungen speichern';
+    window.scrollTo({top:document.getElementById('adminPanel').offsetTop-40,behavior:'smooth'});
   }
 
   function login(){ if(adminPass.value===ADMIN_PASSWORD){ adminPanel.style.display='block'; loginPanel.style.display='none'; } else alert('Falsches Passwort'); }
